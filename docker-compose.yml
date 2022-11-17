@@ -1,0 +1,22 @@
+volumes:
+  data:
+
+services:
+  redis:
+    image: redis:latest
+    volumes:
+      - data:/data
+    ports:
+      - 6379:6379
+  chatapi:
+    build: .
+    ports:
+      - 80:80
+      - 443:443
+    depends_on:
+      - redis
+    environment:
+      - Redis__MessageTimeout=60
+      - Redis__Host=redis
+      - Redis__Port=6379
+      - Redis__Password=redispw
