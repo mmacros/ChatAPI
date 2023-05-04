@@ -22,7 +22,7 @@ namespace ChatAPI.Controllers
         [HttpGet]
         [ProducesResponseType(typeof(IEnumerable<Message>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(IEnumerable<Message>), StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<IEnumerable<Message>>> GetMessages([FromQuery] string to)
+        public async Task<ActionResult<IEnumerable<Message>>> GetMessages([FromQuery] string to, [FromQuery] int id = 0, [FromQuery] int qty = 1000)
         {
             var servers = _redis.GetServers();
             var keys = servers.SelectMany(server => 
@@ -33,10 +33,11 @@ namespace ChatAPI.Controllers
             {
                 var db = _redis.GetDatabase(0);
                 var values = await db.StringGetAsync(keys);
-                messages = values.Select(x => x.HasValue? JsonSerializer.Deserialize<Message>(x.ToString()):null).ToList();
+                messages = values.Select(x => x.HasValue? JsonSerializer.Deserialize<Message>(x.ToString()):null)
+                                    .ToList();
             }
-
-            return Ok(messages);
+            var res = messages.Where(x => x != null && x.Id >= id).Take(qty);
+            return Ok(res);
         }
 
         [HttpPost]

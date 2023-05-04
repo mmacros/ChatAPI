@@ -38,7 +38,7 @@ namespace ChatAPI.Models
         public List<string> Users { get; set; }
         public string From { get; set; }
         public string To { get; set; }
-        public string Id { get; set; }
+        public int Id { get; set; }
         private string BuildConnectionMessageBody(string username, bool isDisconnect)
         {
             if (isDisconnect)

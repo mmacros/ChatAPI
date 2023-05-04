@@ -1,5 +1,6 @@
 ﻿using ChatAPI.Models;
 using System.Net.WebSockets;
+using System.Text;
 using System.Text.Json;
 
 
@@ -7,6 +8,8 @@ namespace ChatAPI.Infrastructure
 {
     public class WebSocketMiddleware
     {
+        private const int BUFFER_SIZE = 1024 * 32; //32 KB
+
         private readonly RequestDelegate _next;
         private WebSocketHandler _webSocketHandler { get; set; }
 
@@ -32,11 +35,18 @@ namespace ChatAPI.Infrastructure
 
             await Receive(socket, async (result, buffer) =>
             {
+
                 if (result.MessageType == WebSocketMessageType.Text)
                 {
                     var msg = _webSocketHandler.ReceiveString(result, buffer);
 
-                    await HandleMessage(socket, msg);
+                    await HandleTextMessage(socket, msg);
+
+                    return;
+                }
+                if (result.MessageType == WebSocketMessageType.Binary)
+                {
+                    await HandleBinaryMessage(socket, buffer);
 
                     return;
                 }
@@ -59,9 +69,9 @@ namespace ChatAPI.Infrastructure
             await _webSocketHandler.BroadcastMessage(JsonSerializer.Serialize(disconnectMessage));
         }
 
-        private async Task HandleMessage(WebSocket socket, string message)
+        private async Task HandleTextMessage(WebSocket socket, string message)
         {
-            Message clientMessage = TryDeserializeClientMessage(message);
+            Message clientMessage = TryDeserializeTextClientMessage(message);
 
             if (clientMessage == null)
             {
@@ -70,7 +80,7 @@ namespace ChatAPI.Infrastructure
 
             if (clientMessage.IsTypeConnection())
             {
-                // For future improvements
+                // TODO:
             }
             else if (clientMessage.IsTypeChat())
             {
@@ -84,7 +94,30 @@ namespace ChatAPI.Infrastructure
             }
         }
 
-        private Message TryDeserializeClientMessage(string str)
+        private async Task HandleBinaryMessage(WebSocket socket, byte[] message)
+        {
+            if (message != null && message.Length > 6)
+            {
+                // Extract from to data
+                var segments = TryDeserializeBinaryClientMessage(message);
+                 
+                var from = "";
+                var to = "";
+
+                if (segments == null || segments.Count() < 3)
+                {
+                    return;
+                }
+                var messageSegments = segments.ToList();
+
+                from = System.Text.Encoding.UTF8.GetString(messageSegments[1]);
+                to = System.Text.Encoding.UTF8.GetString(messageSegments[2]);
+
+                await _webSocketHandler.SendBinaryToAsync(to, message);
+            }
+        }
+
+        private Message TryDeserializeTextClientMessage(string str)
         {
             try
             {
@@ -97,9 +130,20 @@ namespace ChatAPI.Infrastructure
             }
         }
 
+        private static IEnumerable<Byte[]> TryDeserializeBinaryClientMessage(byte[] source)
+        {
+            var marker = Encoding.UTF8.GetBytes("@*");
+
+            if (null == source)
+                throw new ArgumentNullException("source");
+
+            return SplitByteArray(source, marker );
+        }
+
+
         private async Task Receive(WebSocket socket, Action<WebSocketReceiveResult, byte[]> handleMessage)
         {
-            var buffer = new byte[1024 * 4];
+            var buffer = new byte[BUFFER_SIZE];
 
             try
             {
@@ -116,6 +160,43 @@ namespace ChatAPI.Infrastructure
                 Console.WriteLine($"Error: {ex.Message}");
                 await HandleDisconnect(socket);
             }
+        }
+
+        private static List<byte[]> SplitByteArray(byte[] data, byte[] delimiter)
+        {
+            List<byte[]> result = new List<byte[]>();
+            int start = 0;
+
+            for (int i = 0; i < data.Length - delimiter.Length + 1; i++)
+            {
+                bool isMatch = true;
+
+                for (int j = 0; j < delimiter.Length; j++)
+                {
+                    if (data[i + j] != delimiter[j])
+                    {
+                        isMatch = false;
+                        break;
+                    }
+                }
+
+                if (isMatch)
+                {
+                    byte[] segment = new byte[i - start];
+                    Array.Copy(data, start, segment, 0, i - start);
+                    result.Add(segment);
+
+                    start = i + delimiter.Length;
+                    i += delimiter.Length - 1;
+                }
+            }
+
+            // Agrega el último segmento
+            byte[] lastSegment = new byte[data.Length - start];
+            Array.Copy(data, start, lastSegment, 0, data.Length - start);
+            result.Add(lastSegment);
+
+            return result;
         }
     }
 }

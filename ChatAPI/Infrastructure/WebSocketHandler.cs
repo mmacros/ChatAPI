@@ -1,4 +1,5 @@
 ﻿using ChatAPI.Models;
+using System.Net.Sockets;
 using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
@@ -86,6 +87,18 @@ namespace ChatAPI.Infrastructure
             }
         }
 
+        public async Task SendBinaryToAsync(string user, byte[] message)
+        {
+            var websocket = ConnectionManager.GetSocketByUsername(user);
+            if (websocket.State == WebSocketState.Open)
+                await websocket.SendAsync(buffer: new ArraySegment<byte>(array: message,
+                                                      offset: 0,
+                                                      count: message.Length),
+                       messageType: WebSocketMessageType.Binary,
+                       endOfMessage: true,
+                       cancellationToken: CancellationToken.None);
+        }
+
         public async Task ReceiveAsync(WebSocket socket, WebSocketReceiveResult result, byte[] buffer)
         {
             var message = Encoding.UTF8.GetString(buffer, 0, result.Count);
@@ -103,6 +116,7 @@ namespace ChatAPI.Infrastructure
             await SendMessageToAllAsync(message);
         }
 
+        
         public List<string> GetAllUsers()
         {
             return ConnectionManager.GetAllUsernames();

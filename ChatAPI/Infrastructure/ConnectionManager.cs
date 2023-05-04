@@ -40,6 +40,12 @@ namespace ChatAPI.Infrastructure
             return GetUsernameBySocketId(socketId);
         }
 
+        public WebSocket GetSocketByUsername(string userName)
+        {
+            var socketId = _users.GetValueOrDefault(userName, string.Empty);
+            return _sockets.GetValueOrDefault(socketId);
+        }
+
         public void AddSocket(WebSocket socket)
         {
             string socketId = CreateConnectionId();

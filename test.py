@@ -32,17 +32,18 @@ def on_close(ws, close_status_code, close_msg):
     print("Conexión cerrada -> " + close_msg)
 
 # URL del WebSocket al que deseas conectarte
-websocket_url = "ws://localhost/ws?from="
+websocket_url = "ws://localhost:5168/ws?from="
 
 if __name__ == "__main__":
     if len(sys.argv) < 4:
         print("Por favor, ingrese el nombre del usuario, nombre del usuario a enviar el mensaje y mensaje.")
-        print("python test.py [usuario] [usuario-receptor] [mensaje]")
+        print("python test.py [usuario] [usuario-receptor] [TXT/BIN] [mensaje]")
         sys.exit(1)
     
     usuario = sys.argv[1]
     to = sys.argv[2]
-    data = " ".join(sys.argv[3:])
+    mode = sys.argv[3]
+    data = " ".join(sys.argv[4:])
 
     # Creación de la instancia del WebSocket
     ws = websocket.WebSocketApp(
@@ -59,16 +60,20 @@ if __name__ == "__main__":
     # Crear el mensaje JSON para enviar
 
     message_to_send = {
-        "Id": "1",
+        "Id": 1,
         "Type": "CHAT",
         "From": usuario,
         "To": to,
         "Data": data
     }
-    # Convertir el mensaje a formato JSON y enviarlo
-    ws.send(json.dumps(message_to_send))
-
-
+    
+    # Convertir el mensaje a formato JSON o binario y enviarlo
+    if mode == "TXT":
+        ws.send(json.dumps(message_to_send))
+    else:
+        binary_message = bytes("@*" + usuario + "@*" + to + "@*" + data, 'utf-8');
+        ws.send(binary_message, websocket.ABNF.OPCODE_BINARY)
+    
     # Keyboard Interrupt
     rel.signal(2, rel.abort)
     rel.dispatch()

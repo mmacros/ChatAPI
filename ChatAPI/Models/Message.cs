@@ -1,13 +1,23 @@
 ﻿using ChatAPI.Utils;
+using System.Text.Json.Serialization;
 
 namespace ChatAPI.Models
 {
     public class Message
     {
-        public string Id { get; set; }
+        [JsonPropertyName("Id")]
+        public int Id { get; set; }
+
+        [JsonPropertyName("Type")]
         public string Type { get; set; }
+
+        [JsonPropertyName("From")]
         public string From { get; set; }
+
+        [JsonPropertyName("To")]
         public string To { get; set; }
+
+        [JsonPropertyName("Data")]
         public string Data { get; set; }
 
         public bool IsValid(string expectedUsername)
