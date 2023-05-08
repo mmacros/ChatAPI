@@ -71,7 +71,7 @@ if __name__ == "__main__":
     if mode == "TXT":
         ws.send(json.dumps(message_to_send))
     else:
-        binary_message = bytes("@*" + usuario + "@*" + to + "@*" + data, 'utf-8');
+        binary_message = bytes("@*" + usuario + "@*" + to + "@*" + data, 'utf-8')
         ws.send(binary_message, websocket.ABNF.OPCODE_BINARY)
     
     # Keyboard Interrupt
