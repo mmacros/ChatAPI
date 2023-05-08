@@ -90,7 +90,7 @@ namespace ChatAPI.Infrastructure
         public async Task SendBinaryToAsync(string user, byte[] message)
         {
             var websocket = ConnectionManager.GetSocketByUsername(user);
-            if (websocket.State == WebSocketState.Open)
+            if (websocket != null && websocket.State == WebSocketState.Open)
                 await websocket.SendAsync(buffer: new ArraySegment<byte>(array: message,
                                                       offset: 0,
                                                       count: message.Length),

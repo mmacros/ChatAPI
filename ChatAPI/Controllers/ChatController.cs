@@ -36,7 +36,7 @@ namespace ChatAPI.Controllers
                 messages = values.Select(x => x.HasValue? JsonSerializer.Deserialize<Message>(x.ToString()):null)
                                     .ToList();
             }
-            var res = messages.Where(x => x != null && x.Id >= id).Take(qty);
+            var res = messages.Where(x => x != null && x.Id >= id).OrderBy(x => x.Id).Take(qty);
             return Ok(res);
         }
 
